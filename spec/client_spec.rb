@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 require File.join(File.dirname(__FILE__), 'spec_helper')
 
 describe SPARQL::Client do
@@ -27,26 +28,41 @@ describe SPARQL::Client do
 
     it "should handle successful response with json header" do
       @client.should_receive(:get).and_yield response(SPARQL::Client::RESULT_JSON)
-      @client.should_receive(:parse_json_bindings)
+      @client.class.should_receive(:parse_json_bindings)
       @client.query(@query)
     end
 
     it "should handle successful response with xml header" do
       @client.should_receive(:get).and_yield response(SPARQL::Client::RESULT_XML)
-      @client.should_receive(:parse_xml_bindings)
+      @client.class.should_receive(:parse_xml_bindings)
       @client.query(@query)
     end
 
     it "should handle successful response with overridden xml header" do
       @client.should_receive(:get).and_yield response(SPARQL::Client::RESULT_XML)
-      @client.should_receive(:parse_json_bindings)
+      @client.class.should_receive(:parse_json_bindings)
       @client.query(@query, :content_type=>SPARQL::Client::RESULT_JSON)
+    end
+
+    it "should handle successful response with overridden json header" do
+      @client.should_receive(:get).and_yield response(SPARQL::Client::RESULT_JSON)
+      @client.class.should_receive(:parse_xml_bindings)
+      @client.query(@query, :content_type=>SPARQL::Client::RESULT_XML)
     end
 
     it "should handle successful response with overridden plain header" do
       @client.should_receive(:get).and_yield response('text/plain')
       RDF::Reader.should_receive(:for).with(:content_type=>'text/turtle')
       @client.query(@query, :content_type=>'text/turtle')
+    end
+
+    it "should support international characters in response body" do
+      @client = SPARQL::Client.new('http://dbpedia.org/sparql')
+      @query = "SELECT ?name WHERE { <http://dbpedia.org/resource/Tokyo> <http://dbpedia.org/property/nativeName> ?name }"
+      result = @client.query(@query, :content_type => SPARQL::Client::RESULT_JSON).first
+      result[:name].to_s.should == "東京"
+      result = @client.query(@query, :content_type => SPARQL::Client::RESULT_XML).first
+      result[:name].to_s.should == "東京"
     end
   end
 end
